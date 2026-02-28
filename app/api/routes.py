@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
 from fastapi.responses import PlainTextResponse
 from pydantic import BaseModel
 from typing import Optional
@@ -14,6 +14,12 @@ router = APIRouter()
 repository = InMemoryAccountRepository()
 service = AccountService(repository)
 
+def get_service():
+    return service
+
+def get_repository():
+    return repository
+
 # Pydantic model for event request validation
 class EventRequest(BaseModel):
     type: str
@@ -24,7 +30,7 @@ class EventRequest(BaseModel):
 
 # Endpoint to reset the application state
 @router.post("/reset")
-def reset():
+def reset(service: AccountService = Depends(get_service)):
     """
     Resets the application state.
 
@@ -42,7 +48,10 @@ def reset():
 
 # Endpoint to get the balance of an account
 @router.get("/balance")
-def get_balance(account_id: str):
+def get_balance(
+    account_id: str,
+    service: AccountService = Depends(get_service),
+):
     """
     Retrieves the balance of a specific account.
 
@@ -69,13 +78,16 @@ def get_balance(account_id: str):
         return PlainTextResponse(content="0", status_code=404)
 
 #ToDo Implement other event types like transfer
-# Endpoint to handle events (deposit)
+# Endpoint to handle events (deposit and withdraw)
 @router.post("/event")
-def handle_event(event: dict):
+def handle_event(
+    event: EventRequest,
+    service: AccountService = Depends(get_service),
+):
     """
-    Handles deposit events.
+    Handles deposit and withdraw events.
 
-    This endpoint processes financial events such as deposits Based on the event type,
+    This endpoint processes financial events such as deposits and withdrawals. Based on the event type,
     it performs the corresponding operation and returns the updated account information. If the event
     type is invalid, or if the operation fails due to account not found or insufficient funds, an HTTP
     exception is raised.
@@ -84,14 +96,16 @@ def handle_event(event: dict):
     ----------
     event : dict
         A dictionary containing the event details. It must include:
-        - "type" (str): The type of the event ("deposit" ).
+        - "type" (str): The type of the event ("deposit" or "withdraw").
         - "destination" (str, optional): The destination account ID for deposits.
-        - "amount" (int): The amount to deposit.
+        - "origin" (str, optional): The origin account ID for withdrawals.
+        - "amount" (int): The amount to deposit or withdraw.
 
     Returns:
     -------
     dict:
         - For deposits: A dictionary with the destination account ID and updated balance.
+        - For withdrawals: A dictionary with the origin account ID and updated balance.
 
     Raises:
     ------
@@ -100,12 +114,12 @@ def handle_event(event: dict):
         - 404: If the account is not found or there are insufficient funds.
     """
     try:
-        event_type = event["type"]
+        event_type = event.type
 
         if event_type == "deposit":
             account = service.deposit(
-                destination_id=event["destination"],
-                amount=event["amount"],
+                destination_id=event.destination,
+                amount=event.amount,
             )
             return {
                 "destination": {
@@ -114,18 +128,28 @@ def handle_event(event: dict):
                 }
             }
 
-
+        elif event_type == "withdraw":
+            account = service.withdraw(
+                origin_id=event.origin,
+                amount=event.amount,
+            )
+            return {
+                "origin": {
+                    "id": account.account_id,
+                    "balance": account.balance,
+                },
+            }
 
         # Implement here other event types like transfer
 
         else:
             raise HTTPException(status_code=400, detail="Invalid event type")
 
-    except NegativeValue:
-        raise HTTPException(status_code=400, detail="Amount must be a positive integer")
-
     except AccountNotFound:
         raise HTTPException(status_code=404, detail=0)
 
     except InsufficientFunds:
         raise HTTPException(status_code=404, detail=0)
+
+    except NegativeValue:
+        raise HTTPException(status_code=400, detail="Amount must be positive")

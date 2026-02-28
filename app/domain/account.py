@@ -47,4 +47,21 @@ class Account:
 
         self.balance += amount
 
+    def withdraw(self, amount: int):
+        """
+            Subtracts the specified amount from the account balance.
+
+            This method decreases the account's balance by the given amount. It assumes
+            that the amount is a positive integer and that the account has sufficient funds.
+
+            Parameters:
+            ----------
+            amount : int
+                The amount to be withdrawn from the account. Must be a positive integer.
+        """
+        if amount <= 0:
+            raise NegativeValue()
+
+        self.balance -= amount
+
 
