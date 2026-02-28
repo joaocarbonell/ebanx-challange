@@ -15,9 +15,11 @@ router = APIRouter()
 repository = InMemoryAccountRepository()
 service = AccountService(repository)
 
+# Dependency injection functions to provide the service and repository instances to the endpoints
 def get_service():
     return service
 
+# This function provides the repository instance for dependency injection.
 def get_repository():
     return repository
 
@@ -27,7 +29,6 @@ class EventRequest(BaseModel):
     origin: Optional[str] = None
     destination: Optional[str] = None
     amount: int
-
 
 # Endpoint to reset the application state
 @router.post("/reset")
@@ -78,40 +79,43 @@ def get_balance(
     except AccountNotFound:
         return PlainTextResponse(content="0", status_code=404)
 
-#ToDo Implement other event types like transfer
-# Endpoint to handle events (deposit and withdraw)
+# Endpoint to handle events (deposit, withdraw, and transfer)
 @router.post("/event", status_code=status.HTTP_201_CREATED)
 def handle_event(
     event: EventRequest,
     service: AccountService = Depends(get_service),
 ):
     """
-    Handles deposit and withdraw events.
+    Handles deposit, withdraw, and transfer events.
 
-    This endpoint processes financial events such as deposits and withdrawals. Based on the event type,
-    it performs the corresponding operation and returns the updated account information. If the event
-    type is invalid, or if the operation fails due to account not found or insufficient funds, an HTTP
-    exception is raised.
+    This endpoint processes financial events such as deposits, withdrawals, and transfers.
+    Based on the event type, it performs the corresponding operation and returns the updated
+    account information. If the event type is invalid, or if the operation fails due to
+    account not found, insufficient funds, or invalid input, an HTTP exception is raised.
 
     Parameters:
     ----------
-    event : dict
-        A dictionary containing the event details. It must include:
-        - "type" (str): The type of the event ("deposit" or "withdraw").
-        - "destination" (str, optional): The destination account ID for deposits.
-        - "origin" (str, optional): The origin account ID for withdrawals.
-        - "amount" (int): The amount to deposit or withdraw.
+    event : EventRequest
+        A Pydantic model containing the event details. It includes:
+        - type (str): The type of the event ("deposit", "withdraw", or "transfer").
+        - origin (Optional[str]): The origin account ID for withdrawals or transfers.
+        - destination (Optional[str]): The destination account ID for deposits or transfers.
+        - amount (int): The amount to deposit, withdraw, or transfer.
+
+    service : AccountService
+        The account service dependency used to perform the operations.
 
     Returns:
     -------
     dict:
         - For deposits: A dictionary with the destination account ID and updated balance.
         - For withdrawals: A dictionary with the origin account ID and updated balance.
+        - For transfers: A dictionary with both the origin and destination account IDs and their updated balances.
 
     Raises:
     ------
     HTTPException:
-        - 400: If the event type is invalid.
+        - 400: If the event type is invalid, the amount is negative, or required fields are missing.
         - 404: If the account is not found or there are insufficient funds.
     """
     try:
@@ -128,7 +132,7 @@ def handle_event(
                 }
             }
 
-        elif event.type  == "withdraw":
+        elif event.type == "withdraw":
             account = service.withdraw(
                 origin_id=event.origin,
                 amount=event.amount,
@@ -161,7 +165,7 @@ def handle_event(
                 },
             }
 
-                else:
+        else:
             raise HTTPException(status_code=400, detail="Invalid event type")
 
     except AccountNotFound:
