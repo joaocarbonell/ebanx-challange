@@ -5,3 +5,7 @@ class AccountNotFound(Exception):
 class InsufficientFunds(Exception):
     """Raised when an account does not have enough balance to perform a transaction."""
     pass
+
+class NegativeValue(Exception):
+    """Raised when a negative value is provided for a transaction amount."""
+    pass

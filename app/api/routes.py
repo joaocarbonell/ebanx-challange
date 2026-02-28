@@ -5,7 +5,7 @@ from typing import Optional
 
 from app.services.account_service import AccountService
 from app.infrastructure.in_memory_account_repository import InMemoryAccountRepository
-from app.domain.exceptions import AccountNotFound, InsufficientFunds
+from app.domain.exceptions import AccountNotFound, InsufficientFunds, NegativeValue
 
 # Create a router for the API endpoints
 router = APIRouter()
@@ -120,6 +120,9 @@ def handle_event(event: dict):
 
         else:
             raise HTTPException(status_code=400, detail="Invalid event type")
+
+    except NegativeValue:
+        raise HTTPException(status_code=400, detail="Amount must be a positive integer")
 
     except AccountNotFound:
         raise HTTPException(status_code=404, detail=0)

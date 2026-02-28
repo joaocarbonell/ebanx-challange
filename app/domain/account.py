@@ -1,5 +1,8 @@
 # This module defines the Account class, which represents a bank account with an account ID and balance.
 # The Account class includes a method for depositing funds, which updates the account balance accordingly.
+from app.domain.exceptions import NegativeValue
+
+
 class Account:
     """
         A class to represent a bank account.
@@ -39,6 +42,9 @@ class Account:
             amount : int
                 The amount to be deposited into the account. Must be a positive integer.
         """
+        if amount <= 0:
+            raise NegativeValue()
+
         self.balance += amount
 
 
