@@ -1,7 +1,8 @@
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, status, Response
 from fastapi.responses import PlainTextResponse
 from pydantic import BaseModel
 from typing import Optional
+
 
 from app.services.account_service import AccountService
 from app.infrastructure.in_memory_account_repository import InMemoryAccountRepository
@@ -43,7 +44,7 @@ def reset(service: AccountService = Depends(get_service)):
         that the reset operation was successful.
     """
     service.reset()
-    return PlainTextResponse(status_code=200, content="")
+    return PlainTextResponse(content="OK", status_code=200)
 
 
 # Endpoint to get the balance of an account
@@ -79,7 +80,7 @@ def get_balance(
 
 #ToDo Implement other event types like transfer
 # Endpoint to handle events (deposit and withdraw)
-@router.post("/event")
+@router.post("/event", status_code=status.HTTP_201_CREATED)
 def handle_event(
     event: EventRequest,
     service: AccountService = Depends(get_service),
@@ -142,7 +143,7 @@ def handle_event(
 
         elif event.type == "transfer":
             if not event.origin or not event.destination:
-                raise HTTPException(status_code=400)
+                raise HTTPException(status_code=400, detail=0)
 
             origin, destination = service.transfer(
                 origin_id=event.origin,
@@ -165,10 +166,10 @@ def handle_event(
             raise HTTPException(status_code=400, detail="Invalid event type")
 
     except AccountNotFound:
-        raise HTTPException(status_code=404, detail=0)
+        return PlainTextResponse(content="0", status_code=404)
 
     except InsufficientFunds:
-        raise HTTPException(status_code=404, detail=0)
+        return PlainTextResponse(content="0", status_code=404)
 
     except NegativeValue:
         raise HTTPException(status_code=400, detail="Amount must be positive")
