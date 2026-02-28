@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
 from fastapi.responses import PlainTextResponse
 from pydantic import BaseModel
 from typing import Optional
@@ -14,6 +14,12 @@ router = APIRouter()
 repository = InMemoryAccountRepository()
 service = AccountService(repository)
 
+def get_service():
+    return service
+
+def get_repository():
+    return repository
+
 # Pydantic model for event request validation
 class EventRequest(BaseModel):
     type: str
@@ -24,7 +30,7 @@ class EventRequest(BaseModel):
 
 # Endpoint to reset the application state
 @router.post("/reset")
-def reset():
+def reset(service: AccountService = Depends(get_service)):
     """
     Resets the application state.
 
@@ -42,7 +48,10 @@ def reset():
 
 # Endpoint to get the balance of an account
 @router.get("/balance")
-def get_balance(account_id: str):
+def get_balance(
+    account_id: str,
+    service: AccountService = Depends(get_service),
+):
     """
     Retrieves the balance of a specific account.
 
@@ -71,7 +80,10 @@ def get_balance(account_id: str):
 #ToDo Implement other event types like transfer
 # Endpoint to handle events (deposit and withdraw)
 @router.post("/event")
-def handle_event(event: dict):
+def handle_event(
+    event: EventRequest,
+    service: AccountService = Depends(get_service),
+):
     """
     Handles deposit and withdraw events.
 
@@ -102,12 +114,12 @@ def handle_event(event: dict):
         - 404: If the account is not found or there are insufficient funds.
     """
     try:
-        event_type = event["type"]
+        event_type = event.type
 
         if event_type == "deposit":
             account = service.deposit(
-                destination_id=event["destination"],
-                amount=event["amount"],
+                destination_id=event.destination,
+                amount=event.amount,
             )
             return {
                 "destination": {
@@ -116,7 +128,17 @@ def handle_event(event: dict):
                 }
             }
 
-
+        elif event_type == "withdraw":
+            account = service.withdraw(
+                origin_id=event.origin,
+                amount=event.amount,
+            )
+            return {
+                "origin": {
+                    "id": account.account_id,
+                    "balance": account.balance,
+                },
+            }
 
         # Implement here other event types like transfer
 
