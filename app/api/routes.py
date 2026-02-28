@@ -140,7 +140,26 @@ def handle_event(
                 },
             }
 
-        # Implement here other event types like transfer
+        elif event.type == "transfer":
+            if not event.origin or not event.destination:
+                raise HTTPException(status_code=400)
+
+            origin, destination = service.transfer(
+                origin_id=event.origin,
+                destination_id=event.destination,
+                amount=event.amount,
+            )
+
+            return {
+                "origin": {
+                    "id": origin.account_id,
+                    "balance": origin.balance,
+                },
+                "destination": {
+                    "id": destination.account_id,
+                    "balance": destination.balance,
+                },
+            }
 
         else:
             raise HTTPException(status_code=400, detail="Invalid event type")

@@ -20,3 +20,4 @@ class InMemoryAccountRepository:
     def save(self, account: Account) -> None:
         self._accounts[account.account_id] = account
 
+
