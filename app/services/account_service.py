@@ -49,3 +49,28 @@ class AccountService:
         self.repository.save(account)
 
         return account
+
+    # This method handles the transfer operation between two accounts.
+    # It takes the origin account ID, destination account ID, and the amount to be transferred
+    #  as parameters. It checks if the origin account exists and has sufficient funds before performing the transfer.
+    # If the destination account does not exist, it creates a new account with a balance of 0 before performing the transfer.
+    def transfer(self, origin_id: str, destination_id: str, amount: int):
+        origin = self.repository.get(origin_id)
+
+        if not origin:
+            raise AccountNotFound()
+
+        if origin.balance < amount:
+            raise InsufficientFunds()
+
+        destination = self.repository.get(destination_id)
+        if not destination:
+            destination = Account(destination_id, 0)
+
+        origin.withdraw(amount)
+        destination.deposit(amount)
+
+        self.repository.save(origin)
+        self.repository.save(destination)
+
+        return origin, destination
