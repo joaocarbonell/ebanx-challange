@@ -34,3 +34,18 @@ class AccountService:
 
         return account
 
+    # This method handles the withdrawal operation for a specific account.
+    # It takes the origin account ID and the amount to be withdrawn as parameters.
+    def withdraw (self, origin_id: str, amount: int) -> Account:
+        account = self.repository.get(origin_id)
+
+        if not account:
+            raise AccountNotFound()
+
+        if account.balance < amount:
+            raise InsufficientFunds()
+
+        account.withdraw(amount)
+        self.repository.save(account)
+
+        return account
